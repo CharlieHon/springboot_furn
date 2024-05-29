@@ -1,5 +1,7 @@
 package com.charlie.furn.bean;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -20,6 +22,9 @@ public class Furn {
      * `stock` INT(11) NOT NULL		# 库存
      * );
      */
+    // 使用 @TableId 注解，标识表主键。
+    // type指定主键类型：AUTO表示自增长
+    @TableId(type = IdType.AUTO)
     private Integer id;
     private String name;
     private String maker;
