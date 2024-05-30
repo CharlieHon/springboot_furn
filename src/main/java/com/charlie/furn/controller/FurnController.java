@@ -6,9 +6,11 @@ import com.charlie.furn.util.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 /**
  * @RestController = @ResponseBody + @Controller
@@ -36,6 +38,13 @@ public class FurnController {
         log.info("furn={}", furn);
         furnService.save(furn);
         return Result.success();    // 返回成功信息，不携带数据
+    }
+
+    // 返回所有的家具信息，后面再考虑分页显示
+    @RequestMapping("/furns")
+    public Result listFurn() {
+        List<Furn> furnList = furnService.list();
+        return Result.success(furnList);
     }
 
 }
