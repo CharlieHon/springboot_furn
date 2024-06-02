@@ -3,11 +3,9 @@ package com.charlie.furn.controller;
 import com.charlie.furn.bean.Furn;
 import com.charlie.furn.service.FurnService;
 import com.charlie.furn.util.Result;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -45,6 +43,41 @@ public class FurnController {
     public Result listFurn() {
         List<Furn> furnList = furnService.list();
         return Result.success(furnList);
+    }
+
+    /**
+     * 处理修改
+     * 1. @PutMapping 使用 Rest风格，因为是修改的请求，所以使用put请求
+     * 2. @RequestBody：表示前端/客户端发送的数据是以JSON格式发送的
+     * @param furn
+     * @return
+     */
+    @PutMapping("/update")
+    public Result update(@RequestBody Furn furn) {
+        // updateById是mybatis-plus提供的
+        furnService.updateById(furn);
+        return Result.success();
+    }
+
+    /**
+     * 删除家具
+     * 1. 使用url占位符+@PathVariable路径变量使用
+     */
+    @DeleteMapping("/del/{id}")
+    public Result del(@PathVariable(name = "id") Integer ids) {
+        // removeById是由 Mybatis-Plus提供
+        furnService.removeById(ids);
+        return Result.success();
+    }
+
+    /**
+     * 查询：根据id返回家具信息
+     */
+    @GetMapping("/get/{id}")
+    public Result getById(@PathVariable Integer id) {
+        Furn furn = furnService.getById(id);
+        // 返回成功信息，并携带查询到的furn信息
+        return Result.success(furn);
     }
 
 }
