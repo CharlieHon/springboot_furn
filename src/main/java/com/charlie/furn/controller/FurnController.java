@@ -1,5 +1,6 @@
 package com.charlie.furn.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.charlie.furn.bean.Furn;
 import com.charlie.furn.service.FurnService;
 import com.charlie.furn.util.Result;
@@ -78,6 +79,24 @@ public class FurnController {
         Furn furn = furnService.getById(id);
         // 返回成功信息，并携带查询到的furn信息
         return Result.success(furn);
+    }
+
+    /**
+     * 分页查询
+     * @param pageNum：显示第几页，默认为1
+     * @param pageSize：每页显示多少条记录，默认为5
+     * 底层sql：
+     *         SELECT COUNT(*) FROM furn
+     *         SELECT id,name,maker,price,sales,stock FROM furn LIMIT ?,?
+     */
+    @GetMapping("/furnByPage")
+    public Result listFurnByPage(@RequestParam(defaultValue = "1") Integer pageNum,
+                                 @RequestParam(defaultValue = "5") Integer pageSize) {
+        // Page类是MybatisPlus插件pagination中的类
+        // 通过page方法，返回Page对象，对象中封装了分页数据
+        Page<Furn> page = furnService.page(new Page<>(pageNum, pageSize));
+        // 注意观察，返回的page数据结构？这样才能指定在前端如何绑定返回的数据
+        return Result.success(page);
     }
 
 }
