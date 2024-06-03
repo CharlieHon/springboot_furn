@@ -1,11 +1,13 @@
 package com.charlie.furn.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.charlie.furn.bean.Furn;
 import com.charlie.furn.service.FurnService;
 import com.charlie.furn.util.Result;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -96,6 +98,28 @@ public class FurnController {
         // 通过page方法，返回Page对象，对象中封装了分页数据
         Page<Furn> page = furnService.page(new Page<>(pageNum, pageSize));
         // 注意观察，返回的page数据结构？这样才能指定在前端如何绑定返回的数据
+        return Result.success(page);
+    }
+
+    /**
+     * 带条件分页检索
+     * @param pageNum：显示第几页，默认为1
+     * @param pageSize：每页显示多少条记录，默认为5
+     * @param search：检索条件，默认为空("")，即返回所有数据
+     * sql语句：SELECT id,name,maker,price,sales,stock FROM furn WHERE (name LIKE ?) LIMIT ?,?
+     */
+    @GetMapping("/furnBySearchPage")
+    public Result listFurnByConditionPage(@RequestParam(defaultValue = "1") Integer pageNum,
+                                          @RequestParam(defaultValue = "5") Integer pageSize,
+                                          @RequestParam(defaultValue = "") String search) {
+        // 先创建QueryWrapper，将检索条件封装到QueryWrapper
+        QueryWrapper<Furn> queryWrapper = Wrappers.query();
+        // 判断条件是否为空
+        if (StringUtils.hasText(search)) {  // str != null && !str.isEmpty() && containsText(str);
+            // like参数：R column(表字段名), Object val(检索条件)
+            queryWrapper.like("name", search);
+        }
+        Page<Furn> page = furnService.page(new Page<>(pageNum, pageSize), queryWrapper);
         return Result.success(page);
     }
 
