@@ -1,17 +1,24 @@
 package com.charlie.furn.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.charlie.furn.bean.Furn;
 import com.charlie.furn.service.FurnService;
 import com.charlie.furn.util.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.Errors;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * @RestController = @ResponseBody + @Controller
@@ -35,10 +42,26 @@ public class FurnController {
     //      因为不一致导致传过来的数据信息全为空，所以服务器端报错 furn=Furn(id=null, name=null, maker=null, price=null, sales=null, stock=null)
     // 4. 如果前端是以 表单(multipart/form-data) 形式提交的数据，则不需要使用
     @PostMapping("/save")
-    public Result save(@RequestBody Furn furn) {
-        log.info("furn={}", furn);
-        furnService.save(furn);
-        return Result.success();    // 返回成功信息，不携带数据
+    public Result save(@Validated @RequestBody Furn furn, Errors errors) {
+        // 使用 @Validated 注解标识参数，则会对请求的数据进行校验，springboot底层会将错误信息，封装到errors
+
+        // 定义map，准备把errors中的校验错误放入到map。如果有错误信息，就不真正添加，
+        // 并且将错误信息通过map返回给客户端，客户端就可以取出信息
+        HashMap<Object, Object> map = new HashMap<>();
+        List<FieldError> fieldErrors = errors.getFieldErrors();
+        // 遍历，将错误信息放入到map，也有可能没有错误
+        for (FieldError fieldError : fieldErrors) {
+            map.put(fieldError.getField(), fieldError.getDefaultMessage());
+        }
+
+        if (map.isEmpty()) {    // 说明没有校验错误
+            log.info("furn={}", furn);
+            furnService.save(furn);
+            return Result.success();    // 返回成功信息，不携带数据
+        } else {
+            return Result.error("400", "后端校验失败", map);
+        }
+
     }
 
     // 返回所有的家具信息，后面再考虑分页显示
@@ -120,6 +143,49 @@ public class FurnController {
             queryWrapper.like("name", search);
         }
         Page<Furn> page = furnService.page(new Page<>(pageNum, pageSize), queryWrapper);
+        return Result.success(page);
+    }
+
+    /**
+     * 编写方法，使用 LambdaQueryWrapper 封装查询条件，完成检索
+     * 关于lambda表达式，这里使用的是 类名::实例方法
+     * 是 lambda方法引用 中一个不太容易理解的知识点
+     * 1. Furn::getName 通过lambda表达式引用实例方法 getName
+     * 2. 这里就是把 Furn::getName 赋给 SFunction<T, R> 函数式接口
+     * 3. 看看 SFunction<T, R> 源码
+     *
+     * @FunctionalInterface
+     * public interface SFunction<T, R> extends Function<T, R>, Serializable {
+     * }
+     *
+     * @FunctionalInterface
+     * public interface Function<T, R> {
+     *   R apply(T t);  // 这是一个抽象方法，表示根据类型T，获取类型R的结果
+     *   // 后面还有默认实现方法
+     * }
+     *
+     * 4. 传入 Furn::getName 就相当于，实现了 SFunction<T, R> 的 apply方法
+     * 5. 底层会根据传入的方法 Furn::getName 去 **得到对应的属性所映射的表字段** "name"
+     * 6. 回顾mybatis在 XxxMapper.xml 中有 ResultMap 将 属性(字段) 与 表字段 的映射关系
+     * <resultMap id="IdenCardResultMap" type="IdenCard">
+     *     <id property="id" column="id"/>
+     */
+    @GetMapping("/furnBySearchPage2")
+    public Result listFurnByConditionPage2(@RequestParam(defaultValue = "1") Integer pageNum,
+                                          @RequestParam(defaultValue = "5") Integer pageSize,
+                                          @RequestParam(defaultValue = "") String search) {
+        // 创建 LambdaQueryWrapper，封装查询条件
+        LambdaQueryWrapper<Furn> lambdaQueryWrapper = Wrappers.<Furn>lambdaQuery();
+        if (StringUtils.hasText(search)) {
+            //lambdaQueryWrapper.like(Furn::getName, search);
+
+            // 等价于
+            SFunction<Furn, Object> sf = Furn::getName;
+            //sf.apply(new Furn());
+            lambdaQueryWrapper.like(sf, search);
+        }
+        Page<Furn> page = furnService.page(new Page<>(pageNum, pageSize), lambdaQueryWrapper);
+        log.info("page={}", page.getRecords());
         return Result.success(page);
     }
 
